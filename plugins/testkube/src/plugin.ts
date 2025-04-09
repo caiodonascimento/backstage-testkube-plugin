@@ -1,9 +1,13 @@
 import {
+  configApiRef,
+  createApiFactory,
   createPlugin,
   createRoutableExtension,
 } from '@backstage/core-plugin-api';
 
 import { rootRouteRef } from './routes';
+import { testkubeApiRef } from './api/TestkubeApi';
+import { TestkubeClient } from './api/TestkubeClient';
 
 export const testkubePlugin = createPlugin({
   id: 'testkube',
@@ -14,6 +18,14 @@ export const testkubePlugin = createPlugin({
     {
       name: 'testkube'
     }
+  ],
+  apis: [
+    createApiFactory({
+      api: testkubeApiRef,
+      deps: {},
+      factory: () => new TestkubeClient()
+      // factory: ({ configApi }) => new TestkubeClient({ configApi })
+    })
   ]
 });
 

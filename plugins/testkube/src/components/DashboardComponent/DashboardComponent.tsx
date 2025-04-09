@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Typography, Grid } from '@material-ui/core';
 import {
   InfoCard,
@@ -8,53 +8,83 @@ import {
   ContentHeader,
   HeaderLabel,
   Table,
+  TableColumn,
+  EmptyState,
 } from '@backstage/core-components';
 import { TestWorkflowExecutions } from '../../types';
-import { TestkubeClient } from '../../api/TestkubeClient';
+import { useApi } from '@backstage/frontend-plugin-api';
+import { testkubeApiRef } from '../../api/TestkubeApi';
 
-var dashboard = {
-  successRatio: 0,
-  failedExecutions: 0,
-  totalExecutions: 0,
-}
+export const DashboardComponent = () => {
+  const TestkubeApi = useApi(testkubeApiRef);
+  const [data, setData] = useState<{ totals: any, results: TestWorkflowExecutions[] }>({
+    totals: {
+      passed: 0,
+      failed: 0,
+      results: 0,
+    },
+    results: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const lastExecutionsColumns = [
-  { title: 'Execution #', field: 'number' },
-  { title: 'Test Name', field: 'name' },
-  { title: 'Status', field: 'status' },
-  { title: 'Start Time', field: 'scheduledAt' },
-  { title: 'Last update Time', field: 'statusAt' },
-];
+  const lastExecutionsColumns: TableColumn[] = [
+    { title: '#', field: 'number' },
+    { title: 'Test Name', field: 'name' },
+    { title: 'Status', field: 'result.status' },
+    { title: 'Start Time', field: 'scheduledAt' },
+    { title: 'Last update Time', field: 'statusAt' },
+  ];
 
-const lastExecutions: TestWorkflowExecutions[] = []
-
-TestkubeClient.listTestWorkflowExecutions()
-  .then((response) => {
-    if (!response || !response.results) {
-      throw new Error('Invalid response format: results is missing');
+  useEffect(() => {
+    const fetchData = async () => {
+      console.log('Fetching data from API ...')
+      TestkubeApi.listTestWorkflowExecutions()
+        .then((response) => {
+          console.log('Response from API:', response);
+          if (!response || !response.results) {
+            throw new Error('Invalid response format: results is missing');
+          }
+          if (!Array.isArray(response.results)) {
+            throw new Error('Invalid response format: results is not an array');
+          }
+          setData(response);
+        })
+        .catch((fetchError) => {
+          console.log('Error fetching test workflow executions:', fetchError);
+          setError('Failed to fetch test workflow executions');
+        }).finally(() => setLoading(false));
     }
-    dashboard.successRatio = response.totals.passed * 100 / response.totals.results;
-    dashboard.failedExecutions = response.totals.failed;
-    dashboard.totalExecutions = response.totals.results;
-    if (!Array.isArray(response.results)) {
-      throw new Error('Invalid response format: results is not an array');
-    }
-    const executions = response.results.map((execution: any) => ({
-      number: execution.number,
-      name: execution.name,
-      status: execution.result.status,
-      scheduledAt: new Date(execution.scheduledAt).toLocaleString(),
-      statusAt: new Date(execution.statusAt).toLocaleString(),
-    }));
-    lastExecutions.push(...executions);
-  })
-  .catch((error) => {
-    console.error('Error fetching test workflow executions:', error);
+    fetchData();
+  }, [TestkubeApi]);
+
+  // TODO: simplify this logic to not replicate page and header 3 times
+  if (loading) {
+    return (<Page themeId="home">
+      <Header title="Testkube" subtitle="Test Automation Execution Platform">
+      </Header>
+      <Content>
+        <Typography>Loading...</Typography>
+      </Content>
+    </Page>);
   }
-);
-
-export const DashboardComponent = () => (
-  <Page themeId="home">
+  if (error || !data || !data.results || data.results.length === 0) {
+    return (
+      <Page themeId="home">
+        <Header title="Testkube" subtitle="Test Automation Execution Platform">
+        </Header>
+        <Content>
+          <EmptyState
+            missing="info"
+            title="No data available"
+            description="Unable to load data from Testkube API, please review your set up."
+          >
+          </EmptyState>
+        </Content>
+      </Page>
+    );
+  }
+  return (<Page themeId="home">
     <Header title="Testkube" subtitle="Test Automation Execution Platform">
       <HeaderLabel label="Go to platform" value="https://app.testkube.io"></HeaderLabel>
     </Header>
@@ -64,28 +94,28 @@ export const DashboardComponent = () => (
         <Grid item xs={12} sm={6} md={4}>
           <InfoCard title="Pass/Fail Ratio">
             <Typography variant="h5">
-              {dashboard.successRatio}
+              {data.totals.passed * 100 / data.totals.results || 0}%
             </Typography>
           </InfoCard>
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
           <InfoCard title="Failed Executions">
             <Typography variant="h5">
-              {dashboard.failedExecutions}
+              {data.totals.failed}
             </Typography>
           </InfoCard>
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
           <InfoCard title="Total Executions">
             <Typography variant="h5">
-              {dashboard.totalExecutions}
+              {data.totals.results}
             </Typography>
           </InfoCard>
         </Grid>
       </Grid>
       <br />
-      <Table columns={lastExecutionsColumns} title="Last Executions" subtitle='The last 20 executions' options={{ paging: false }} data={lastExecutions}>
+      <Table columns={lastExecutionsColumns} title="Last Executions" subtitle='The last 20 executions' options={{ paging: false }} data={data.results}>
       </Table>
     </Content>
-  </Page>
-);
+  </Page>);
+}
