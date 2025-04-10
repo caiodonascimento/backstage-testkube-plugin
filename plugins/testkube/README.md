@@ -8,6 +8,9 @@ _This plugin was created through the Backstage CLI_
 
 * Testkube OSS running, check here the instructions to [install](https://docs.testkube.io/articles/install/standalone-agent).
 * Port forward the Testkube API using the following command: `kubectl port-forward svc/testkube-api-server -n testkube 8088:8088`.
+* Prepare some data:
+  * Create Testkube example: `kubectl apply -f example/testkube/k6-test.yaml -n testkube`.
+  * Run it as many times as you want: `curl localhost:8088/v1/test-workflows/k6-sample/executions -XPOST`.
 
 ## Getting started
 
