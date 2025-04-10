@@ -1,6 +1,6 @@
 import {
-  createPlugin,
-  createRoutableExtension,
+  createComponentExtension,
+  createPlugin
 } from '@backstage/core-plugin-api';
 
 import { rootRouteRef } from './routes';
@@ -17,11 +17,22 @@ export const testkubePlugin = createPlugin({
   ]
 });
 
-export const TestkubePage = testkubePlugin.provide(
-  createRoutableExtension({
-    name: 'TestkubePage',
-    component: () =>
-      import('./components/DashboardComponent').then(m => m.DashboardComponent),
-    mountPoint: rootRouteRef,
+export const TestkubeDashboardPage = testkubePlugin.provide(
+  createComponentExtension({
+    name: 'TestkubeDashboardPage',
+    component: {
+      lazy: () =>
+      import('./components/DashboardComponent').then(m => m.DashboardComponent)
+    }
+  }),
+);
+
+export const TestkubeSummaryPage = testkubePlugin.provide(
+  createComponentExtension({
+    name: 'TestkubeSummaryPage',
+    component: {
+      lazy: () =>
+      import('./components/SummaryComponent').then(m => m.SummaryComponent)
+    }
   }),
 );

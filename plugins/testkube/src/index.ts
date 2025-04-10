@@ -1,1 +1,5 @@
-export { testkubePlugin, TestkubePage } from './plugin';
+export {
+  testkubePlugin,
+  TestkubeDashboardPage,
+  TestkubeSummaryPage
+} from './plugin';
